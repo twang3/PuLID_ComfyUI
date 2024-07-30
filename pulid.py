@@ -290,7 +290,8 @@ class ApplyPulid:
             },
         }
 
-    RETURN_TYPES = ("MODEL",)
+    RETURN_TYPES = ("MODEL", "BOOLEAN")
+    RETURN_NAMES = ("model", "success")
     FUNCTION = "apply_pulid"
     CATEGORY = "pulid"
 
@@ -358,7 +359,8 @@ class ApplyPulid:
                     iface_embeds = torch.from_numpy(face.embedding).unsqueeze(0).to(device, dtype=dtype)
                     break
             else:
-                raise Exception('insightface: No face detected.')
+                # raise Exception('insightface: No face detected.')
+                return model, False
 
             # get eva_clip embeddings
             face_helper.clean_all()
@@ -367,8 +369,9 @@ class ApplyPulid:
             face_helper.align_warp_face()
 
             if len(face_helper.cropped_faces) == 0:
-                raise Exception('facexlib: No face detected.')
-            
+                # raise Exception('facexlib: No face detected.')
+                return model, False
+
             face = face_helper.cropped_faces[0]
             face = image_to_tensor(face).unsqueeze(0).permute(0,3,1,2).to(device)
             parsing_out = face_helper.face_parse(T.functional.normalize(face, [0.485, 0.456, 0.406], [0.229, 0.224, 0.225]))[0]
@@ -451,7 +454,7 @@ class ApplyPulid:
             set_model_patch_replace(work_model, patch_kwargs, ("middle", 0, index))
             number += 1
 
-        return (work_model,)
+        return (work_model, True)
 
 class ApplyPulidAdvanced(ApplyPulid):
     @classmethod
