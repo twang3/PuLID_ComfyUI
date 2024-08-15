@@ -194,6 +194,8 @@ def to_gray(img):
  Nodes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
+cached_models = {}
+
 
 class PulidModelLoader:
     @classmethod
@@ -205,6 +207,10 @@ class PulidModelLoader:
     CATEGORY = "pulid"
 
     def load_model(self, pulid_file):
+        global cached_models
+        if pulid_file in cached_models:
+            return cached_models[pulid_file]
+
         ckpt_path = folder_paths.get_full_path("pulid", pulid_file)
 
         model = comfy.utils.load_torch_file(ckpt_path, safe_load=True)
@@ -221,7 +227,12 @@ class PulidModelLoader:
         # Also initialize the model, takes longer to load but then it doesn't have to be done every time you change parameters in the apply node
         model = PulidModel(model)
 
+        cached_models[pulid_file] = (model,)
         return (model,)
+
+
+cached_insightface_models = {}
+
 
 class PulidInsightFaceLoader:
     @classmethod
@@ -237,10 +248,19 @@ class PulidInsightFaceLoader:
     CATEGORY = "pulid"
 
     def load_insightface(self, provider):
+        global cached_insightface_models
+        if provider in cached_insightface_models:
+            return cached_insightface_models[provider]
+
         model = FaceAnalysis(name="antelopev2", root=INSIGHTFACE_DIR, providers=[provider + 'ExecutionProvider',]) # alternative to buffalo_l
         model.prepare(ctx_id=0, det_size=(640, 640))
 
+        cached_insightface_models[provider] = (model,)
         return (model,)
+
+
+cached_eva_clip_model = None
+
 
 class PulidEvaClipLoader:
     @classmethod
@@ -254,6 +274,10 @@ class PulidEvaClipLoader:
     CATEGORY = "pulid"
 
     def load_eva_clip(self):
+        global cached_eva_clip_model
+        if cached_eva_clip_model is not None:
+            return cached_eva_clip_model
+
         from .eva_clip.factory import create_model_and_transforms
 
         model, _, _ = create_model_and_transforms('EVA02-CLIP-L-14-336', 'eva_clip', force_custom_clip=True)
@@ -267,6 +291,7 @@ class PulidEvaClipLoader:
         if not isinstance(eva_transform_std, (list, tuple)):
             model["image_std"] = (eva_transform_std,) * 3
 
+        cached_eva_clip_model = (model,)
         return (model,)
 
 
